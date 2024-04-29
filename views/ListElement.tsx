@@ -45,7 +45,7 @@ const ElementsList = ({ navigation }) => {
         const docs = [];
         query.forEach((doc) => {
           const { nombre, precio } = doc.data();
-          // console.log("doc obtenido", doc.id, nombre);
+          // // console.log("doc obtenido", doc.id, nombre);
           docs.push({
             id: doc.id,
             nombre,
