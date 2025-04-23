@@ -8,47 +8,49 @@ import {
   ToastAndroid,
   ActivityIndicator,
 } from "react-native";
-import { productos } from "../config/Productos";
-import { encontrarUltimoIdListado } from "../config/utils";
+import { Picker } from "@react-native-picker/picker"; // Import Picker
 import appFirebase from "../credentialsFirebase";
-import { getFirestore, collection, addDoc } from "firebase/firestore";
+import { getFirestore } from "firebase/firestore";
+import { Product } from "../types/Product";
+import { createProduct } from "../services/products";
+import { useMeasures } from "../hooks/useMeasures";
 
 const db = getFirestore(appFirebase);
 
 const CreateElement = ({ navigation, onGuardado }) => {
-  const defaultProducto = {
-    id: 0,
-    nombre: "",
-    precio: "",
-    categoria: "",
+  const defaultProducto: Omit<Product, "id"> = {
+    name: "",
+    price: 0,
+    unit_id: 1,
   };
   const [state, setstate] = useState(defaultProducto);
   const [loading, setLoading] = useState(false);
+
+  const { units } = useMeasures();
 
   const handleChangeText = (name, value) => {
     setstate({ ...state, [name]: value });
   };
 
   const saveNewElement = async () => {
-    if (state.nombre === "") alert("Debes ingresar un nombre");
+    if (state.name === "") alert("Debes ingresar un nombre");
     else {
       try {
         setLoading(true);
-        //guardamos el elemento en el array
-        productos.push({
-          id: productos.length ? encontrarUltimoIdListado(productos) + 1 : 1,
-          nombre: state.nombre,
-          precio: parseFloat(state.precio),
-          categoria: "varios",
+
+        //guardamos en supabase
+        const success = await createProduct({
+          name: state.name,
+          price: parseFloat(state.price.toString()),
+          unit_id: state.unit_id,
         });
 
-        //guardamos en firebase
-        await addDoc(collection(db, "productos"), { ...state });
-
-        //Se envia la señal de que se guardo para que se cierre
-        ToastAndroid.show("Se guardó el elemento", ToastAndroid.SHORT);
-        if (onGuardado !== undefined) onGuardado();
-        else navigation.goBack();
+        if (success) {
+          //Se envia la señal de que se guardo para que se cierre
+          ToastAndroid.show("Se guardó el elemento", ToastAndroid.SHORT);
+          if (onGuardado) onGuardado();
+          else navigation.goBack();
+        } else alert("Error al guardar el producto");
       } catch (error) {
         console.log(error);
       } finally {
@@ -64,12 +66,21 @@ const CreateElement = ({ navigation, onGuardado }) => {
         <TextInput
           style={styles.input}
           placeholder="Nombre"
-          onChangeText={(value) => handleChangeText("nombre", value)}
+          onChangeText={(value) => handleChangeText("name", value)}
         />
+        <Picker
+          selectedValue={state.unit_id}
+          onValueChange={(value) => handleChangeText("unit_id", value)}
+          style={styles.picker}
+        >
+          {units.map((unit) => (
+            <Picker.Item key={unit.id} label={unit.name} value={unit.id} />
+          ))}
+        </Picker>
         <TextInput
           style={styles.input}
           placeholder="Precio"
-          onChangeText={(value) => handleChangeText("precio", value)}
+          onChangeText={(value) => handleChangeText("price", value)}
           keyboardType="numeric" // Teclado numérico para el precio
         />
       </View>
@@ -102,6 +113,7 @@ const styles = StyleSheet.create({
     marginBottom: 10,
     paddingHorizontal: 10,
   },
+  picker: { height: 50, marginBottom: 10 },
 });
 
 export default CreateElement;

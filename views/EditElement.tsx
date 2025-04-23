@@ -1,5 +1,4 @@
 import { useEffect, useState } from "react";
-import { productos } from "../config/Productos";
 import {
   Button,
   StyleSheet,
@@ -8,32 +7,33 @@ import {
   ToastAndroid,
   View,
 } from "react-native";
-import appFirebase from "../credentialsFirebase";
-import { getFirestore, doc, getDoc, updateDoc } from "firebase/firestore";
-
-const db = getFirestore(appFirebase);
+import { Product } from "../types/Product";
+import { getProductById, updateProduct } from "../services/products";
+import { Picker } from "@react-native-picker/picker";
+import { useMeasures } from "../hooks/useMeasures";
 
 const EditElement = ({ id, onModificado }) => {
-  const [product, setProduct] = useState({
-    id: "",
-    nombre: "",
-    precio: "",
+  const [product, setProduct] = useState<Omit<Product, "id">>({
+    name: "",
+    price: 0,
+    unit_id: 1,
   });
-
+  const { units } = useMeasures();
   const handleChangeText = (name, value) => {
     setProduct({ ...product, [name]: value });
   };
 
   function limpiarCampos() {
-    setProduct({ id: "", nombre: "", precio: "" });
+    setProduct({ name: "", price: 0, unit_id: 1 });
   }
 
   const getProduct = async () => {
     try {
-      const docRef = doc(db, "productos", id);
-      const docSnap = await getDoc(docRef);
-      const { docId, nombre, precio } = docSnap.data();
-      setProduct({ id: docId, nombre, precio });
+      const data = await getProductById(id);
+      if (data) {
+        const { name, price, unit_id } = data;
+        setProduct({ name, price, unit_id });
+      }
     } catch (error) {
       console.error(error);
     }
@@ -43,17 +43,19 @@ const EditElement = ({ id, onModificado }) => {
   }, []);
 
   const saveElementModified = async () => {
-    if (product.nombre === "") alert("Debes ingresar un nombre");
+    if (product.name === "") alert("Debes ingresar un nombre");
     else {
       try {
         //guardamos el elemento modificado en la base de datos
-        await updateDoc(doc(db, "productos", id), {
-          nombre: product.nombre,
-          precio: product.precio,
+        const success = await updateProduct(id, {
+          name: product.name,
+          price: parseFloat(product.price.toString()),
+          unit_id: product.unit_id,
         });
-        //Se envia la señal de que se guardo para que se cierre
-        ToastAndroid.show("Se modificó el elemento", ToastAndroid.SHORT);
-        onModificado();
+        if (success) {
+          ToastAndroid.show("Se modificó el elemento", ToastAndroid.SHORT);
+          onModificado();
+        } else alert("Error al modificar el producto");
       } catch (error) {
         console.log(error);
       }
@@ -66,15 +68,24 @@ const EditElement = ({ id, onModificado }) => {
         <TextInput
           style={styles.input}
           placeholder="Nombre"
-          onChangeText={(value) => handleChangeText("nombre", value)}
-          defaultValue={product.nombre}
+          onChangeText={(value) => handleChangeText("name", value)}
+          defaultValue={product.name}
         />
+        <Picker
+          selectedValue={product.unit_id}
+          onValueChange={(value) => handleChangeText("unit_id", value)}
+          style={styles.picker}
+        >
+          {units.map((unit) => (
+            <Picker.Item key={unit.id} label={unit.name} value={unit.id} />
+          ))}
+        </Picker>
         <TextInput
           style={styles.input}
           placeholder="Precio"
-          onChangeText={(value) => handleChangeText("precio", value)}
+          onChangeText={(value) => handleChangeText("price", value)}
           keyboardType="numeric" // Teclado numérico para el precio
-          defaultValue={product.precio.toString()}
+          defaultValue={product.price.toString()}
         />
       </View>
       <View style={styles.buttonGroup}>
@@ -111,8 +122,9 @@ const styles = StyleSheet.create({
   buttonGroup: {
     flexDirection: "row", // Para colocar los botones en fila
     justifyContent: "space-between", // Para que haya espacio entre los botones
-    width:"100%"
+    width: "100%",
   },
+  picker: { height: 50, marginBottom: 10 },
 });
 
 export default EditElement;

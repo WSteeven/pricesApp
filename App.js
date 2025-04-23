@@ -26,14 +26,14 @@ function MyStack() {
       }}
     >
       <Stack.Screen
-        name="MenuPrincipal"
-        component={MenuPrincipal}
-        options={{ title: "Menú principal" }}
-      />
-      <Stack.Screen
         name="ElementsList"
         component={ElementsList}
         options={{ title: "Listado de ítems" }}
+      />
+      <Stack.Screen
+        name="MenuPrincipal"
+        component={MenuPrincipal}
+        options={{ title: "Menú principal" }}
       />
       <Stack.Screen
         name="CreateElement"
