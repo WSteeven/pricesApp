@@ -12,27 +12,28 @@ import { getProductById, updateProduct } from "../services/products";
 import { Picker } from "@react-native-picker/picker";
 import { useMeasures } from "../hooks/useMeasures";
 
-const EditElement = ({ id, onModificado }) => {
+const EditElement = ({ id, onModificado, scannedBarcode, navigation }) => {
   const [product, setProduct] = useState<Omit<Product, "id">>({
     name: "",
     price: 0,
     unit_id: 1,
+    barcode: "",
   });
   const { units } = useMeasures();
   const handleChangeText = (name, value) => {
     setProduct({ ...product, [name]: value });
   };
-
+  if (scannedBarcode != null) handleChangeText("barcode", scannedBarcode);
   function limpiarCampos() {
-    setProduct({ name: "", price: 0, unit_id: 1 });
+    setProduct({ name: "", price: 0, unit_id: 1, barcode: "" });
   }
 
   const getProduct = async () => {
     try {
       const data = await getProductById(id);
       if (data) {
-        const { name, price, unit_id } = data;
-        setProduct({ name, price, unit_id });
+        const { name, price, unit_id, barcode } = data;
+        setProduct({ name, price, unit_id, barcode });
       }
     } catch (error) {
       console.error(error);
@@ -51,6 +52,7 @@ const EditElement = ({ id, onModificado }) => {
           name: product.name,
           price: parseFloat(product.price.toString()),
           unit_id: product.unit_id,
+          barcode: product.barcode,
         });
         if (success) {
           ToastAndroid.show("Se modificó el elemento", ToastAndroid.SHORT);
@@ -61,6 +63,13 @@ const EditElement = ({ id, onModificado }) => {
       }
     }
   };
+  const scanBarcode = () => {
+    navigation.navigate("BarcodeScannerScreen", {
+      method: "edit",
+      onScan: (data) => handleChangeText("barcode", data),
+    });
+  };
+
   return (
     <View style={styles.container}>
       <Text style={styles.title}>Editar Producto</Text>
@@ -76,9 +85,13 @@ const EditElement = ({ id, onModificado }) => {
           onValueChange={(value) => handleChangeText("unit_id", value)}
           style={styles.picker}
         >
-          {units.map((unit) => (
-            <Picker.Item key={unit.id} label={unit.name} value={unit.id} />
-          ))}
+          {units && units.length > 0 ? (
+            units.map((unit) => (
+              <Picker.Item key={unit.id} label={unit.name} value={unit.id} />
+            ))
+          ) : (
+            <Picker.Item label="Cargando..." value={null} />
+          )}
         </Picker>
         <TextInput
           style={styles.input}
@@ -87,6 +100,15 @@ const EditElement = ({ id, onModificado }) => {
           keyboardType="numeric" // Teclado numérico para el precio
           defaultValue={product.price.toString()}
         />
+        <View style={styles.barcodeContainer}>
+          <TextInput
+            style={[styles.input, { flex: 1 }]}
+            placeholder="Código de barras"
+            value={product.barcode}
+            onChangeText={(value) => handleChangeText("barcode", value)}
+          />
+          <Button title="Escanear" onPress={scanBarcode} />
+        </View>
       </View>
       <View style={styles.buttonGroup}>
         <Button title="Modificar" onPress={saveElementModified} />
@@ -125,6 +147,11 @@ const styles = StyleSheet.create({
     width: "100%",
   },
   picker: { height: 50, marginBottom: 10 },
+  barcodeContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 10,
+  },
 });
 
 export default EditElement;

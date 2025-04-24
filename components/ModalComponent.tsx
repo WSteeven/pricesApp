@@ -17,7 +17,7 @@ const ModalComponent = ({ modalVisible, onClose, modalContent }) => {
           <Pressable style={styles.closeButtonModal} onPress={onClose}>
             <CloseIcon name="closecircleo" size={30} color="white" />
           </Pressable>
-          {modalContent}
+          {modalContent? modalContent: <View/>}
         </View>
       </View>
     </Modal>

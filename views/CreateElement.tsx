@@ -9,13 +9,10 @@ import {
   ActivityIndicator,
 } from "react-native";
 import { Picker } from "@react-native-picker/picker"; // Import Picker
-import appFirebase from "../credentialsFirebase";
-import { getFirestore } from "firebase/firestore";
 import { Product } from "../types/Product";
 import { createProduct } from "../services/products";
 import { useMeasures } from "../hooks/useMeasures";
 
-const db = getFirestore(appFirebase);
 
 const CreateElement = ({ navigation, onGuardado }) => {
   const defaultProducto: Omit<Product, "id"> = {
@@ -73,9 +70,13 @@ const CreateElement = ({ navigation, onGuardado }) => {
           onValueChange={(value) => handleChangeText("unit_id", value)}
           style={styles.picker}
         >
-          {units.map((unit) => (
-            <Picker.Item key={unit.id} label={unit.name} value={unit.id} />
-          ))}
+          {units && units.length > 0 ? (
+            units.map((unit) => (
+              <Picker.Item key={unit.id} label={unit.name} value={unit.id} />
+            ))
+          ) : (
+            <Picker.Item label="Cargando..." value={null} />
+          )}
         </Picker>
         <TextInput
           style={styles.input}

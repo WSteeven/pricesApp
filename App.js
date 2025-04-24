@@ -10,6 +10,8 @@ import CreateElement from "./views/CreateElement";
 //Navigation
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { NavigationContainer } from "@react-navigation/native";
+import { SafeAreaProvider } from "react-native-safe-area-context";
+import BarcodeScannerScreen from "./views/BarcodeScannerScreen";
 
 const Stack = createNativeStackNavigator();
 function MyStack() {
@@ -40,15 +42,21 @@ function MyStack() {
         component={CreateElement}
         options={{ title: "Crear ítem" }}
       />
+      <Stack.Screen 
+        name="BarcodeScannerScreen" 
+        component={BarcodeScannerScreen} 
+        options={{title:"Escanear código de barras"}} />
     </Stack.Navigator>
   );
 }
 
 export default function App() {
   return (
+    <SafeAreaProvider>
     <NavigationContainer>
       <MyStack />
     </NavigationContainer>
+    </SafeAreaProvider>
   );
 }
 

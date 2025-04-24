@@ -5,5 +5,6 @@ export interface Product  {
     name: string,
     price: number,
     unit_id: number,
-    units_measures?: UnitMeasure
+    units_measures?: UnitMeasure,
+    barcode?: string,
   };

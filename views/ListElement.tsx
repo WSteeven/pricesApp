@@ -5,48 +5,43 @@ import {
   StyleSheet,
   TextInput,
   ToastAndroid,
+  ScrollView,
 } from "react-native";
-import { View, Text, ScrollView } from "react-native";
+import { View, Text } from "react-native";
 import Ionicons from "react-native-vector-icons/Ionicons";
 import Icon from "react-native-vector-icons/Feather";
 import CreateElement from "./CreateElement";
 import ModalComponent from "../components/ModalComponent";
 import EditElement from "./EditElement";
-import appFirebase from "../credentialsFirebase";
-import {
-  getFirestore,
-  collection,
-  addDoc,
-  getDocs,
-  deleteDoc,
-  doc,
-} from "firebase/firestore";
 import { useProducts } from "../hooks/useProducts";
 
-const db = getFirestore(appFirebase);
-
-const ElementsList = ({ navigation }) => {
+const ElementsList = ({ navigation, route }) => {
   const [textABuscar, setTextABuscar] = useState("");
   const [modalVisible, setModalVisible] = useState(false);
-  const [isPressed, setIsPressed] = useState(false);
   const [component, setComponent] = useState(null);
   const [idProduct, setIdElement] = useState(null);
+  const [scannedBarcode, setScannedBarcode] = useState("");
+  const [method, setMethod] = useState("create");
 
+  useEffect(() => {
+    if (route.params?.scannedBarcode) {
+      setScannedBarcode(route.params.scannedBarcode);
+      setMethod(route.params.method || "create");
+      if (method === "edit") {
+        editarElemento();
+      }
+    }
+  });
   const {
     products: productos,
     listadoProductos,
-    loading,
     eliminarProducto,
     filtrarProductos,
     refetchProductos,
   } = useProducts();
-  const handleLongPress = (val) => {
-    setIdElement(val);
-    setIsPressed(true);
-  };
 
-  const handlePressOut = () => {
-    setIsPressed(false);
+  const handleRowPress = (id) => {
+    setIdElement(id); // Actualiza el ID del producto seleccionado
   };
 
   function crearElemento() {
@@ -55,22 +50,44 @@ const ElementsList = ({ navigation }) => {
     );
     abrirModal();
   }
+
   function abrirModal() {
     setModalVisible(true);
   }
+
   function cerrarModal() {
     setModalVisible(false);
     refetchProductos();
     filtrarProductos(textABuscar, productos);
-
-    // console.log(productos);
   }
+
   function editarElemento() {
-    setComponent(<EditElement id={idProduct} onModificado={cerrarModal} />);
+    if (!idProduct) {
+      ToastAndroid.show(
+        "Selecciona un producto para editar",
+        ToastAndroid.SHORT
+      );
+      return;
+    }
+    setComponent(
+      <EditElement
+        id={idProduct}
+        onModificado={cerrarModal}
+        scannedBarcode={scannedBarcode}
+        navigation={navigation}
+      />
+    );
     abrirModal();
   }
 
   function eliminarElemento() {
+    if (!idProduct) {
+      ToastAndroid.show(
+        "Selecciona un producto para eliminar",
+        ToastAndroid.SHORT
+      );
+      return;
+    }
     Alert.alert(
       "Confirmación",
       "¿Estás segur@ que deseas eliminar el elemento?",
@@ -86,6 +103,7 @@ const ElementsList = ({ navigation }) => {
             await eliminarProducto(idProduct);
             ToastAndroid.show("Elemento eliminado", ToastAndroid.SHORT);
             refetchProductos();
+            setIdElement(null); // Limpia el ID seleccionado
           },
         },
       ]
@@ -98,9 +116,16 @@ const ElementsList = ({ navigation }) => {
         <Text style={{ paddingTop: 5, paddingStart: 5 }}>
           Listado de Productos
         </Text>
-        <Pressable onPress={() => navigation.navigate("MenuPrincipal")}>
-          <Icon name="home" size={25} />
-        </Pressable>
+        <Text>
+          <Pressable
+            onPress={() => navigation.navigate("BarcodeScannerScreen")}
+          >
+            <Ionicons name="barcode-outline" size={25} />
+          </Pressable>
+          <Pressable onPress={() => navigation.navigate("MenuPrincipal")}>
+            <Icon name="home" size={25} />
+          </Pressable>
+        </Text>
       </View>
 
       <TextInput
@@ -133,13 +158,22 @@ const ElementsList = ({ navigation }) => {
 
           {/* Filas de la tabla */}
           {listadoProductos.map((producto) => (
-            <View key={producto.id} style={styles.tableRow}>
+            <Pressable
+              key={producto.id}
+              onPress={() => handleRowPress(producto.id)}
+              style={[
+                styles.tableRow,
+                idProduct === producto.id && styles.selectedRow, // Resalta la fila seleccionada
+              ]}
+            >
               <Text style={styles.tableCell}>{producto.name}</Text>
               <Text style={styles.tableCell}>
                 {producto.units_measures?.abbreviation.toUpperCase() || ""}
               </Text>
-              <Text style={styles.tableCell}>$ {producto.price}</Text>
-            </View>
+              <Text style={styles.tableCell}>
+                $ {producto.price.toFixed(2)}
+              </Text>
+            </Pressable>
           ))}
         </View>
       </ScrollView>
@@ -204,5 +238,8 @@ const styles = StyleSheet.create({
   headerCell: {
     fontWeight: "bold",
     backgroundColor: "#e0e0e0",
+  },
+  selectedRow: {
+    backgroundColor: "#d0f0c0", // Color para la fila seleccionada
   },
 });
